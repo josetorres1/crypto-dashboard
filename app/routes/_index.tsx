@@ -1,5 +1,6 @@
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { useMemo, useState } from "react";
 import { CryptoCard } from "~/components/cryto-card";
 import { cryptoDetails } from "~/data/currencies";
 import { CryptoCurrency } from "~/entities/currency";
@@ -70,12 +71,38 @@ export const loader: LoaderFunction = async () => {
 
 export default function Index() {
   const { cryptoCurrencies, error } = useLoaderData<typeof loader>();
+  const [filter, setFilter] = useState("");
+
+  const filteredCryptoCurrencies = useMemo(() => {
+    if (!filter) return cryptoCurrencies;
+    const lowerFilter = filter.toLowerCase();
+
+    return cryptoCurrencies.filter((currency: CryptoCurrency) => {
+      return (
+        currency.name.toLowerCase().includes(lowerFilter) ||
+        currency.symbol.toLowerCase().includes(lowerFilter)
+      );
+    });
+  }, [cryptoCurrencies, filter]);
+
   return (
     <div className="flex h-screen p-4 sm:p-8 ">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">
-          Crypto Dashboard
-        </h1>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-8 text-center">
+            Crypto Dashboard
+          </h1>
+          <div className="relative max-w-md mx-auto">
+            <input
+              type="text"
+              placeholder="Filter by name or Symbol"
+              className="w-full px-4 py-2 text-gray-900 bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
+        </div>
+        {/* if errors  */}
         {error && (
           <div
             className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md"
@@ -86,12 +113,18 @@ export default function Index() {
           </div>
         )}
 
-        {!error && cryptoCurrencies.length > 0 && (
+        {/* No error and results */}
+        {!error && filteredCryptoCurrencies.length > 0 && (
           <div className="flex flex-wrap items-center gap-4 justify-center">
-            {(cryptoCurrencies as CryptoCurrency[]).map((currency) => (
+            {(filteredCryptoCurrencies as CryptoCurrency[]).map((currency) => (
               <CryptoCard key={currency.name} crypto={currency} />
             ))}
           </div>
+        )}
+
+        {/* No erorors and not results */}
+        {!error && filteredCryptoCurrencies.length === 0 && (
+          <p className="text-center text-white ">No currency found</p>
         )}
       </div>
     </div>
