@@ -1,12 +1,5 @@
 import { PropsWithChildren } from "react";
-
-interface CryptoCurrency {
-  name: string;
-  symbol: string;
-  rateUSD: number;
-  rateBTC: number;
-  logoUrl: string;
-}
+import { CryptoCurrency } from "~/entities/currency";
 
 export const mockCrypto: CryptoCurrency = {
   name: "Bitcoin",
@@ -56,8 +49,11 @@ const CardContent = ({ children, className = "" }: BaseProps) => (
 export function CryptoCard({ crypto }: { crypto: CryptoCurrency }) {
   return (
     <Card className="w-full max-w-sm transform hover:scale-105 transition-transform duration-300 ease-in-out cursor-pointer">
+      {" "}
       <CardHeader>
+        {" "}
         <div className="flex flex-col">
+          {" "}
           <CardTitle>{crypto.name}</CardTitle>
           <CardDescription>{crypto.symbol}</CardDescription>
         </div>
