@@ -1,22 +1,36 @@
-import { PropsWithChildren } from "react";
+import { DraggableAttributes } from "@dnd-kit/core";
+import { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { CSSProperties, PropsWithChildren } from "react";
 import { CryptoCurrency } from "~/entities/currency";
-
-export const mockCrypto: CryptoCurrency = {
-  name: "Bitcoin",
-  symbol: "BTC",
-  rateUSD: 65000.0,
-  rateBTC: 1.0,
-  logoUrl: "https://placehold.co/40x40/F7931A/FFFFFF?text=B",
-};
 
 interface BaseProps
   extends PropsWithChildren<{
     className?: string;
   }> {}
 
-const Card = ({ children, className = "" }: BaseProps) => (
+interface DraggingProps {
+  attributes: DraggableAttributes;
+  listeners?: SyntheticListenerMap;
+  style: CSSProperties;
+  setNodeRef: (node: HTMLElement | null) => void;
+}
+
+const DraggingCard = ({
+  children,
+  className = "",
+  setNodeRef,
+  style,
+  attributes,
+  listeners,
+}: BaseProps & DraggingProps) => (
   <div
-    className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
+    className={`touch-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}
+    ref={setNodeRef}
+    style={style}
+    {...attributes}
+    {...listeners}
   >
     {children}
   </div>
@@ -47,13 +61,32 @@ const CardContent = ({ children, className = "" }: BaseProps) => (
 );
 
 export function CryptoCard({ crypto }: { crypto: CryptoCurrency }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: crypto.symbol });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : "auto",
+    opacity: isDragging ? 0.7 : 1,
+  };
+
   return (
-    <Card className="w-full max-w-sm transform hover:scale-105 transition-transform duration-300 ease-in-out cursor-pointer">
-      {" "}
+    <DraggingCard
+      attributes={attributes}
+      style={style}
+      listeners={listeners}
+      setNodeRef={setNodeRef}
+      className="w-full max-w-sm transform hover:scale-105 transition-transform duration-300 ease-in-out cursor-pointer"
+    >
       <CardHeader>
-        {" "}
         <div className="flex flex-col">
-          {" "}
           <CardTitle>{crypto.name}</CardTitle>
           <CardDescription>{crypto.symbol}</CardDescription>
         </div>
@@ -91,6 +124,6 @@ export function CryptoCard({ crypto }: { crypto: CryptoCurrency }) {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </DraggingCard>
   );
 }

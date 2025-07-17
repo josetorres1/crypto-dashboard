@@ -1,6 +1,22 @@
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  rectSwappingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CryptoCard } from "~/components/cryto-card";
 import { cryptoDetails } from "~/data/currencies";
 import { CryptoCurrency } from "~/entities/currency";
@@ -71,19 +87,50 @@ export const loader: LoaderFunction = async () => {
 
 export default function Index() {
   const { cryptoCurrencies, error } = useLoaderData<typeof loader>();
+  const [orderedCurrencies, setOrderedCurrencies] = useState<CryptoCurrency[]>(
+    []
+  );
   const [filter, setFilter] = useState("");
 
+  useEffect(() => {
+    if (cryptoCurrencies) {
+      setOrderedCurrencies(cryptoCurrencies);
+    }
+  }, [cryptoCurrencies]);
+
+  const currencyIds = useMemo(
+    () => orderedCurrencies.map((c) => c.symbol),
+    [orderedCurrencies]
+  );
+
   const filteredCryptoCurrencies = useMemo(() => {
-    if (!filter) return cryptoCurrencies;
+    if (!filter) return orderedCurrencies;
     const lowerFilter = filter.toLowerCase();
 
-    return cryptoCurrencies.filter((currency: CryptoCurrency) => {
+    return orderedCurrencies.filter((currency: CryptoCurrency) => {
       return (
         currency.name.toLowerCase().includes(lowerFilter) ||
         currency.symbol.toLowerCase().includes(lowerFilter)
       );
     });
-  }, [cryptoCurrencies, filter]);
+  }, [filter, orderedCurrencies]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setOrderedCurrencies((prev) => {
+        const oldIndex = prev.findIndex((item) => item.symbol === active.id);
+        const newIndex = prev.findIndex((item) => item.symbol === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
 
   return (
     <div className="flex h-screen p-4 sm:p-8 ">
@@ -115,11 +162,21 @@ export default function Index() {
 
         {/* No error and results */}
         {!error && filteredCryptoCurrencies.length > 0 && (
-          <div className="flex flex-wrap items-center gap-4 justify-center">
-            {(filteredCryptoCurrencies as CryptoCurrency[]).map((currency) => (
-              <CryptoCard key={currency.name} crypto={currency} />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={currencyIds} strategy={rectSortingStrategy}>
+              <div className="flex flex-wrap items-center gap-4 justify-center">
+                {(filteredCryptoCurrencies as CryptoCurrency[]).map(
+                  (currency) => (
+                    <CryptoCard key={currency.name} crypto={currency} />
+                  )
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
 
         {/* No erorors and not results */}
